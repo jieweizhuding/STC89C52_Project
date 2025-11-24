@@ -1,0 +1,294 @@
+C51 COMPILER V9.60.7.0   OLED                                                              11/04/2025 22:31:50 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE OLED
+OBJECT MODULE PLACED IN .\Objects\OLED.obj
+COMPILER INVOKED BY: C:\Users\17563\sl\IDE\keil_C51\C51\BIN\C51.EXE OLED.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND P
+                    -RINT(.\Listings\OLED.lst) TABS(2) OBJECT(.\Objects\OLED.obj)
+
+line level    source
+
+   1          /*  
+   2           *    
+   3           *    Init_OLED             
+   4           *    Oled_Clean();                 
+   5           *    Oled_DispString_6x8(0,Line_0,"  Main Meun");  
+   6           *    Oled_DispString_8x16(100,Line_1,"Hz");       
+   7           *    Oled_DispFloat_0V(80,Line_0,DCVoltage);      
+   8           *    Oled_DispFloat_2V(80,Line_0,DCVoltage);  
+   9          */
+  10          
+  11          #include "OLED.h"
+  12          
+  13          
+  14          code unsigned char F6x8[][6] =
+  15          {
+  16          0x00, 0x3E, 0x51, 0x49, 0x45, 0x3E,// 0
+  17          0x00, 0x00, 0x42, 0x7F, 0x40, 0x00,// 1
+  18          0x00, 0x42, 0x61, 0x51, 0x49, 0x46,// 2
+  19          0x00, 0x21, 0x41, 0x45, 0x4B, 0x31,// 3
+  20          0x00, 0x18, 0x14, 0x12, 0x7F, 0x10,// 4
+  21          0x00, 0x27, 0x45, 0x45, 0x45, 0x39,// 5
+  22          0x00, 0x3C, 0x4A, 0x49, 0x49, 0x30,// 6
+  23          0x00, 0x01, 0x71, 0x09, 0x05, 0x03,// 7
+  24          0x00, 0x36, 0x49, 0x49, 0x49, 0x36,// 8
+  25          0x00, 0x06, 0x49, 0x49, 0x29, 0x1E,// 9
+  26          0x00, 0x00, 0x36, 0x36, 0x00, 0x00,// :
+  27            
+  28          0x00, 0x7C, 0x12, 0x11, 0x12, 0x7C,// A
+  29          0x00, 0x7F, 0x49, 0x49, 0x49, 0x36,// B
+  30          0x00, 0x3E, 0x41, 0x41, 0x41, 0x22,// C
+  31          0x00, 0x7F, 0x41, 0x41, 0x22, 0x1C,// D
+  32          0x00, 0x7F, 0x49, 0x49, 0x49, 0x41,// E
+  33          0x00, 0x7F, 0x09, 0x09, 0x09, 0x01,// F
+  34          0x00, 0x3E, 0x41, 0x49, 0x49, 0x7A,// G
+  35          0x00, 0x7F, 0x08, 0x08, 0x08, 0x7F,// H
+  36          0x00, 0x00, 0x41, 0x7F, 0x41, 0x00,// I
+  37          0x00, 0x20, 0x40, 0x41, 0x3F, 0x01,// J
+  38          0x00, 0x7F, 0x08, 0x14, 0x22, 0x41,// K
+  39          0x00, 0x7F, 0x40, 0x40, 0x40, 0x40,// L
+  40          0x00, 0x7F, 0x02, 0x0C, 0x02, 0x7F,// M
+  41          0x00, 0x7F, 0x04, 0x08, 0x10, 0x7F,// N
+  42          0x00, 0x3E, 0x41, 0x41, 0x41, 0x3E,// O
+  43          0x00, 0x7F, 0x09, 0x09, 0x09, 0x06,// P
+  44          0x00, 0x3E, 0x41, 0x51, 0x21, 0x5E,// Q
+  45          0x00, 0x7F, 0x09, 0x19, 0x29, 0x46,// R
+  46          0x00, 0x46, 0x49, 0x49, 0x49, 0x31,// S
+  47          0x00, 0x01, 0x01, 0x7F, 0x01, 0x01,// T
+  48          0x00, 0x3F, 0x40, 0x40, 0x40, 0x3F,// U
+  49          0x00, 0x1F, 0x20, 0x40, 0x20, 0x1F,// V
+  50          0x00, 0x3F, 0x40, 0x38, 0x40, 0x3F,// W
+  51          0x00, 0x63, 0x14, 0x08, 0x14, 0x63,// X
+  52          0x00, 0x07, 0x08, 0x70, 0x08, 0x07,// Y
+  53          0x00, 0x61, 0x51, 0x49, 0x45, 0x43,// Z
+  54          };
+C51 COMPILER V9.60.7.0   OLED                                                              11/04/2025 22:31:50 PAGE 2   
+
+  55          
+  56          
+  57          #define high 1
+  58          #define low 0
+  59          #define Brightness 0xCF
+  60          #define X_WIDTH 128
+  61          #define Y_WIDTH 64
+  62          
+  63          static void Oled_Write_Command(unsigned char x);
+  64          static void I2c_Start(void);
+  65          static void I2c_Stop(void);
+  66          static void I2c_Write_Byte(unsigned char x);
+  67          static void Oled_Write_Byte(unsigned char x);
+  68          
+  69          static void Oled_Set_Pos(unsigned char x,unsigned char y);
+  70          static void float32_to_str(unsigned char Num, unsigned char u8Char[]);
+  71                 //uint16_t Line, uint16_t Column,float num);
+  72          
+  73          
+  74          void Oled_DispString_6x8(unsigned char Column, unsigned char Line,unsigned char *ch){
+  75   1              unsigned char c=0,i=0,j=0;
+  76   1              while (ch[j]!='\0'){
+  77   2                      if(ch[j]<65)
+  78   2                        c=ch[j]-'0';
+  79   2                      else
+  80   2                        c =ch[j]-54;
+  81   2                      if(Column>126){Column=0;Line++;}
+  82   2                      Oled_Set_Pos(Column,Line);
+  83   2                      for(i=0;i<6;i++)
+  84   2                      Oled_Write_Byte(F6x8[c][i]);
+  85   2                      Column+=6;
+  86   2                      j++;
+  87   2              }
+  88   1      }
+  89          
+  90          
+  91          
+  92          /*OLEDʾ*/
+  93          void Oled_DispNUM(unsigned char Column,unsigned char Line,unsigned char num){
+  94   1        unsigned char chFloat[20]={'\0'};
+  95   1        float32_to_str(num,chFloat);
+  96   1        Oled_DispString_6x8(Column,Line,chFloat);
+  97   1      }
+  98          
+  99          void Oled_DispNUM_2(unsigned char Column,unsigned char Line,unsigned char num){
+ 100   1              unsigned char chFloat[20]={'\0'};
+ 101   1              float32_to_str(num,chFloat);
+ 102   1              if(num<10){
+ 103   2                      Oled_DispString_6x8(Column,Line,"0");
+ 104   2                      Oled_DispString_6x8(Column+6,Line,chFloat);
+ 105   2              }else{
+ 106   2                      Oled_DispString_6x8(Column,Line,chFloat);
+ 107   2              }
+ 108   1      }
+ 109          
+ 110          void Init_OLED(void){
+ 111   1              delay_ms(50);             
+ 112   1              Oled_Write_Command(0xae);//--turn off Oled panel
+ 113   1              Oled_Write_Command(0x00);//---set low column address
+ 114   1              Oled_Write_Command(0x10);//---set high column address
+ 115   1              Oled_Write_Command(0x40);//--set start line address  Set Mapping RAM Display Start Line (0x00~0x3F
+             -)
+C51 COMPILER V9.60.7.0   OLED                                                              11/04/2025 22:31:50 PAGE 3   
+
+ 116   1              Oled_Write_Command(0x81);//--set contrast control register
+ 117   1              Oled_Write_Command(Brightness); // Set SEG Output Current Brightness
+ 118   1              Oled_Write_Command(0xa1);//--Set SEG/Column Mapping    
+ 119   1              Oled_Write_Command(0xc8);//Set COM/Row Scan Direction   
+ 120   1              Oled_Write_Command(0xa6);//--set normal display
+ 121   1              Oled_Write_Command(0xa8);//--set multiplex ratio(1 to 64)
+ 122   1              Oled_Write_Command(0x3f);//--1/64 duty
+ 123   1              Oled_Write_Command(0xd3);//-set display offset  Shift Mapping RAM Counter (0x00~0x3F)
+ 124   1              Oled_Write_Command(0x00);//-not offset
+ 125   1              Oled_Write_Command(0xd5);//--set display clock divide ratio/oscillator frequency
+ 126   1              Oled_Write_Command(0x80);//--set divide ratio, Set Clock as 100 Frames/Sec
+ 127   1              Oled_Write_Command(0xd9);//--set pre-charge period
+ 128   1              Oled_Write_Command(0xf1);//Set Pre-Charge as 15 Clocks & Discharge as 1 Clock
+ 129   1              Oled_Write_Command(0xda);//--set com pins hardware configuration
+ 130   1              Oled_Write_Command(0x12);
+ 131   1              Oled_Write_Command(0xdb);//--set vcomh
+ 132   1              Oled_Write_Command(0x40);//Set VCOM Deselect Level
+ 133   1              Oled_Write_Command(0x20);//-Set Page Addressing Mode (0x00/0x01/0x02)
+ 134   1              Oled_Write_Command(0x02);//
+ 135   1              Oled_Write_Command(0x8d);//--set Charge Pump enable/disable
+ 136   1              Oled_Write_Command(0x14);//--set(0x10) disable
+ 137   1              Oled_Write_Command(0xa4);// Disable Entire Display On (0xa4/0xa5)
+ 138   1              Oled_Write_Command(0xa6);// Disable Inverse Display On (0xa6/a7)
+ 139   1              Oled_Write_Command(0xaf);//--turn on Oled panel
+ 140   1              Oled_Fill(0x00); 
+ 141   1              Oled_Set_Pos(0,0);
+ 142   1      }
+ 143            
+ 144          
+ 145          void I2c_Start(void){
+ 146   1              // sda_out;
+ 147   1              // scl_out;
+ 148   1              scl_1;
+ 149   1              sda_1;
+ 150   1              sda_0;
+ 151   1              scl_0;
+ 152   1      }
+ 153          
+ 154          void I2c_Stop(void){
+ 155   1              scl_0;
+ 156   1              sda_0;
+ 157   1              scl_1;
+ 158   1              sda_1;
+ 159   1      }
+ 160          
+ 161          void I2c_Write_Byte(unsigned char x){
+ 162   1              unsigned char i;
+ 163   1              scl_0;
+ 164   1              for(i=0;i<8;i++)
+ 165   1              {
+ 166   2                      if(x&0x80)
+ 167   2                              sda_1;
+ 168   2                      else
+ 169   2                              sda_0;
+ 170   2                      scl_1;
+ 171   2                      scl_0;
+ 172   2                      x<<=1;
+ 173   2              }
+ 174   1              sda_1;
+ 175   1              scl_1;
+ 176   1              scl_0;
+ 177   1      }
+C51 COMPILER V9.60.7.0   OLED                                                              11/04/2025 22:31:50 PAGE 4   
+
+ 178          
+ 179          void Oled_Write_Byte(unsigned char x){
+ 180   1              I2c_Start();
+ 181   1              I2c_Write_Byte(0x78);
+ 182   1              I2c_Write_Byte(0x40);  
+ 183   1              I2c_Write_Byte(x);
+ 184   1              I2c_Stop();
+ 185   1      }
+ 186          void Oled_Write_Command(unsigned char x){
+ 187   1              I2c_Start();
+ 188   1              I2c_Write_Byte(0x78);
+ 189   1              I2c_Write_Byte(0x00);  
+ 190   1              I2c_Write_Byte(x);
+ 191   1              I2c_Stop();
+ 192   1      }
+ 193          void Oled_Fill(unsigned char x){
+ 194   1              unsigned char i1,j1;
+ 195   1              for(i1=0;i1<8;i1++){
+ 196   2                      Oled_Write_Command(0xb0+i1);
+ 197   2                      Oled_Write_Command(0x01);
+ 198   2                      Oled_Write_Command(0x10);
+ 199   2                      for(j1=0;j1<X_WIDTH;j1++)
+ 200   2                              Oled_Write_Byte(x);
+ 201   2              }
+ 202   1      }
+ 203          
+ 204          void Oled_Set_Pos(unsigned char x,unsigned char y){
+ 205   1              Oled_Write_Command(0xb0+y);
+ 206   1              Oled_Write_Command(((x&0xf0)>>4)|0x10);
+ 207   1              Oled_Write_Command((x&0x0f)|0x01);
+ 208   1      }
+ 209          /**********************************************************
+ 210          *��������  void float32_to_str(float Num, unsigned char n, unsigned char u8Char[])
+ 211          *���ܣ�    ��һ�������ȸ�����ת��Ϊ�ַ���
+ 212          *��ڲ�����float Num, unsigned char n, unsigned char u8Char[]
+ 213          *���ز�������
+ 214          *˵����    Num:Ԥת�������ݣ�u8Char[]:���ڴ���ת������ַ�
+             -���
+ 215          *               n: ��ȷ��С�������λ
+ 216          ***********************************************************/
+ 217          void float32_to_str(unsigned char Num, unsigned char u8Char[])
+ 218          {
+ 219   1              unsigned char  u8_digit = 0; //���ݵ�λ��
+ 220   1              unsigned char  i = 0;
+ 221   1              unsigned long int32_temp  = 0;
+ 222   1              unsigned char u8_temp;
+ 223   1      
+ 224   1              if(Num==0){
+ 225   2                u8Char[0]='0';
+ 226   2                u8Char[1]='\0';
+ 227   2                return;
+ 228   2              }
+ 229   1              int32_temp = Num < 0 ? (-Num) : (Num); 
+ 230   1      
+ 231   1              
+ 232   1              /*�Ѹ������ӵ�λ��ʼת��Ϊ�ַ���*/
+ 233   1              i = 0;
+ 234   1              u8_digit = 0;
+ 235   1              while (int32_temp != 0)
+ 236   1              {
+ 237   2                 u8Char[i] = '0' + int32_temp % 10; //�����λ����
+ 238   2                 int32_temp = int32_temp / 10;
+C51 COMPILER V9.60.7.0   OLED                                                              11/04/2025 22:31:50 PAGE 5   
+
+ 239   2                 u8_digit++;//��������λ�����ַ����ĳ���
+ 240   2                 i++;
+ 241   2              }
+ 242   1              
+ 243   1              /*���Ϸ���λ*/
+ 244   1              if(Num < 0)
+ 245   1              {
+ 246   2                      u8Char[u8_digit] = '-';                      //���ַ���ĩβ���ϸ��ű
+             -�־
+ 247   2                      u8_digit++;                                  //�ַ������ȼ�1
+ 248   2              }
+ 249   1      
+ 250   1              /*��u8Char�е��ַ����ߵ�λ�Ե�*/
+ 251   1              for (i=0; i < (u8_digit / 2); i++)
+ 252   1              {
+ 253   2                      u8_temp = u8Char[i];
+ 254   2                      u8Char[i] = u8Char[u8_digit - i - 1];
+ 255   2                      u8Char[u8_digit - i - 1] = u8_temp;
+ 256   2              }
+ 257   1              u8Char[u8_digit] = '\0';                                    //�ַ�����β����һ
+             -��'\0'
+ 258   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    849    ----
+   CONSTANT SIZE    =    264    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      65
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

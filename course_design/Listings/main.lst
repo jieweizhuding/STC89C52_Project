@@ -1,0 +1,312 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              11/04/2025 22:27:58 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Users\17563\sl\IDE\keil_C51\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND P
+                    -RINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include <OLED.h>
+   3          #define uchar unsigned char
+   4          
+   5          /*
+   6          需要
+   7          1. 开关电机  电机开时无法设置计时，电机开时只能通过按键关闭电机或远程关�
+             -�电机
+   8          2. 电机关时，可以设置电机的定时时间，电机的模式，可以按键设置或远程设置
+   9          
+  10          确定  page切换
+  11          取消  page=1
+  12          
+  13          
+  14          */
+  15          // PWM是否启动
+  16          sbit PWM = P2 ^ 0;
+  17          uchar PWM_s = 0;
+  18          uchar PWM_mode = 1;
+  19          uchar PWM_time = 0;
+  20          uchar set_time = 50;
+  21          
+  22          // 定时结束,0代表未结束，1代表结束
+  23          sbit BZ = P2 ^ 1;
+  24          uchar alarm = 0;
+  25          
+  26          // flu实现1s1次的“中断”
+  27          unsigned int flu = 0;
+  28          
+  29          // 控制按键消抖
+  30          uchar pre_key = 0xff;
+  31          uchar cur_key = 0xff;
+  32          
+  33          // page=0为电机启动页，显示倒计时，page=1为设置时间、电机模式页
+  34          uchar page = 1;
+  35          // mode=0为LR左右模式，mode=1为UD上下模式
+  36          uchar mode = 0;
+  37          // sel=0选择为M，sel=1选择为S
+  38          uchar sel = 0;
+  39          // 分秒
+  40          uchar time[2] = {0, 0};
+  41          
+  42          void delay_ms(unsigned int ms_number);
+  43          
+  44          void time0() interrupt 1
+  45          {
+  46   1        TH0 = 0xB8; // 20ms 初值高位
+  47   1        TL0 = 0x00; // 20ms 初值低位
+  48   1      
+  49   1        if (page == 0 && alarm == 0)
+  50   1        {
+  51   2          flu++;
+  52   2          if (flu >= 50)
+  53   2          {
+C51 COMPILER V9.60.7.0   MAIN                                                              11/04/2025 22:27:58 PAGE 2   
+
+  54   3            time[1]--;
+  55   3            // if (time[1] == 9){
+  56   3            //  Oled_Clean();
+  57   3            //  Oled_Clean();
+  58   3            // }
+  59   3            if (time[1] >= 60)
+  60   3            {
+  61   4              time[0]--;
+  62   4              if (time[0] >= 100)
+  63   4              {
+  64   5                // TODO: 定时归零
+  65   5                time[0] = 11;
+  66   5                time[1] = 11;
+  67   5                alarm = 1;
+  68   5                PWM_s=0;
+  69   5              }
+  70   4              else
+  71   4              {
+  72   5                time[1] = 59;
+  73   5              }
+  74   4              // if (time[0] == 9){
+  75   4              //  Oled_Clean();
+  76   4              //  Oled_Clean();
+  77   4              // }
+  78   4            }
+  79   3            flu = 0;
+  80   3          }
+  81   2        }
+  82   1      
+  83   1        cur_key = P1;
+  84   1        if (cur_key != pre_key)
+  85   1        {
+  86   2          if (pre_key == ~0x00)
+  87   2          {
+  88   3            if (cur_key == ~0x01 || cur_key == ~0x02)
+  89   3            {
+  90   4              if (page)
+  91   4              {
+  92   5                if (mode == 0)
+  93   5                {
+  94   6                  sel = sel ? 0 : 1;
+  95   6                }
+  96   5                else
+  97   5                {
+  98   6                  if (cur_key == ~0x01)
+  99   6                  {
+ 100   7                    if (mode == 1)
+ 101   7                    {
+ 102   8                      time[sel]++;
+ 103   8                      // sel=1,最大为59，sel=0，最大为99
+ 104   8                      if (time[sel] > 59 + (1 - sel) * 40)
+ 105   8                      {
+ 106   9                        time[sel] = 0;
+ 107   9                        // Oled_Clean();
+ 108   9                        // Oled_Clean();
+ 109   9                      }
+ 110   8                    }
+ 111   7                    else
+ 112   7                    {
+ 113   8                      if (PWM_mode != 2)
+ 114   8                      {
+ 115   9                        PWM_mode++;
+C51 COMPILER V9.60.7.0   MAIN                                                              11/04/2025 22:27:58 PAGE 3   
+
+ 116   9                        set_time += 30;
+ 117   9                      }
+ 118   8                    }
+ 119   7                  }
+ 120   6                  else
+ 121   6                  {
+ 122   7                    if (mode == 1)
+ 123   7                    {
+ 124   8                      if (time[sel] == 0)
+ 125   8                      {
+ 126   9                        time[sel] = 59 + (1 - sel) * 40;
+ 127   9                      }
+ 128   8                      else
+ 129   8                      {
+ 130   9                        // if (time[sel] == 10)
+ 131   9                        // {
+ 132   9                        //  Oled_Clean();
+ 133   9                        //  Oled_Clean();
+ 134   9                        // }
+ 135   9                        time[sel]--;
+ 136   9                      }
+ 137   8                    }
+ 138   7                    else
+ 139   7                    {
+ 140   8                      if (PWM_mode != 0)
+ 141   8                      {
+ 142   9                        PWM_mode--;
+ 143   9                        set_time -= 30;
+ 144   9                      }
+ 145   8                    }
+ 146   7                  }
+ 147   6                }
+ 148   5              }
+ 149   4            }
+ 150   3            else if (cur_key == ~0x04)
+ 151   3            {
+ 152   4              // 按键功能切换，切换LR模式与UD模式
+ 153   4              mode++;
+ 154   4              if (mode > 2)
+ 155   4              {
+ 156   5                mode = 0;
+ 157   5              }
+ 158   4            }
+ 159   3            else if (cur_key == ~0x08)
+ 160   3            {
+ 161   4              // 切换显示页,显示时转动，不显示时不转动
+ 162   4              page = page ? 0 : 1;
+ 163   4              alarm = 0;
+ 164   4              if(page==0){
+ 165   5                PWM_s = 1;
+ 166   5              }else{
+ 167   5                PWM_s=0;
+ 168   5              }
+ 169   4              flu = 0;
+ 170   4      
+ 171   4              Oled_Clean();
+ 172   4              Oled_Clean();
+ 173   4            }
+ 174   3          }
+ 175   2          pre_key = cur_key;
+ 176   2        }
+ 177   1      }
+C51 COMPILER V9.60.7.0   MAIN                                                              11/04/2025 22:27:58 PAGE 4   
+
+ 178          
+ 179          // 1ms
+ 180          void time1() interrupt 3
+ 181          {
+ 182   1        TH1 = 0xFC;
+ 183   1        TL1 = 0x66;
+ 184   1        if (PWM_s)
+ 185   1        {
+ 186   2          if (PWM_time < set_time)
+ 187   2          {
+ 188   3            PWM = 1;
+ 189   3          }
+ 190   2          else
+ 191   2          {
+ 192   3            PWM = 0;
+ 193   3          }
+ 194   2          PWM_time++;
+ 195   2          if (PWM_time >= 100)
+ 196   2            PWM_time = 0;
+ 197   2        }
+ 198   1        else
+ 199   1        {
+ 200   2          PWM = 0;
+ 201   2        }
+ 202   1      }
+ 203          
+ 204          void main()
+ 205          {
+ 206   1        TMOD = 0x11;
+ 207   1      
+ 208   1        TH0 = 0xB8; // 20ms 初值高位
+ 209   1        TL0 = 0x00; // 20ms 初值低位
+ 210   1      
+ 211   1        TH1 = 0xFC;
+ 212   1        TL1 = 0x66;
+ 213   1      
+ 214   1        ET0 = 1;
+ 215   1        ET1 = 1;
+ 216   1        EA = 1;
+ 217   1      
+ 218   1        TR0 = 1;
+ 219   1        TR1 = 1;
+ 220   1      
+ 221   1        Init_OLED();
+ 222   1        Oled_Clean();
+ 223   1      
+ 224   1        while (1)
+ 225   1        {
+ 226   2          BZ = alarm ? 0 : 1;
+ 227   2          if (page == 0)
+ 228   2          {
+ 229   3            if (alarm)
+ 230   3              Oled_DispString_6x8(2, 0, "A");
+ 231   3            else
+ 232   3              Oled_DispString_6x8(2, 0, "W");
+ 233   3          }
+ 234   2          else
+ 235   2          {
+ 236   3            Oled_DispString_6x8(2, 0, "SET");
+ 237   3            if (mode == 0)
+ 238   3              Oled_DispString_6x8(50, 0, "LR");
+ 239   3            else if (mode == 1)
+C51 COMPILER V9.60.7.0   MAIN                                                              11/04/2025 22:27:58 PAGE 5   
+
+ 240   3              Oled_DispString_6x8(50, 0, "UD");
+ 241   3            else
+ 242   3              Oled_DispString_6x8(50, 0, "SP");
+ 243   3            Oled_DispString_6x8(2, 4, "SEL");
+ 244   3            if (sel == 0)
+ 245   3            {
+ 246   4              Oled_DispString_6x8(50, 4, "M");
+ 247   4            }
+ 248   3            else
+ 249   3            {
+ 250   4              Oled_DispString_6x8(50, 4, "S");
+ 251   4            }
+ 252   3          }
+ 253   2          Oled_DispString_6x8(2, 2, "M");
+ 254   2          Oled_DispNUM_2(15, 2, time[0]);
+ 255   2          Oled_DispString_6x8(2, 3, "S");
+ 256   2          Oled_DispNUM_2(15, 3, time[1]);
+ 257   2          if (PWM_mode == 0)
+ 258   2            Oled_DispString_6x8(2, 5, "LOW");
+ 259   2          else if (PWM_mode == 1)
+ 260   2            Oled_DispString_6x8(2, 5, "MED");
+ 261   2          else
+ 262   2            Oled_DispString_6x8(2, 5, "HIG");
+ 263   2          Oled_DispNUM_2(50, 5, set_time);
+ 264   2          delay_ms(200);
+ 265   2        }
+ 266   1      }
+ 267          
+ 268          void delay_ms(unsigned int ms_number)
+ 269          {
+ 270   1        unsigned int i;
+ 271   1        unsigned char j;
+ 272   1        for (i = 0; i < ms_number; i++)
+ 273   1        {
+ 274   2          for (j = 0; j < 200; j++)
+ 275   2            ;
+ 276   2          for (j = 0; j < 102; j++)
+ 277   2            ;
+ 278   2        }
+ 279   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    714    ----
+   CONSTANT SIZE    =     37    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     14    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

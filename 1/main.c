@@ -1,3 +1,4 @@
+/*
 #include <REGX52.H>
 #include <OLED.h>
 #define uchar unsigned char
@@ -34,7 +35,7 @@ uchar code motor_phase_4[8] = {
 	0x02, // B
 	0x04, // C
 	0x08, // D
-
+	
 	0x10, // A
 	0x20, // B
 	0x40, // C
@@ -102,18 +103,18 @@ void time1() interrupt 3
 				{
 					n0 -= 10;
 					if (n0 <= 120)
-						n0 = 120;
-				//if(n0<=10)
-				//  n0=10;
+					n0 = 120;
+					//if(n0<=10)
+					//  n0=10;
 				}
-
+				
 				else
 				{
 					if (mode == 0)
 					{
 						if (sel == 0)
-							sel = 3;
-						  sel--;
+						sel = 3;
+						sel--;
 					}
 					else
 					{
@@ -142,7 +143,7 @@ void time1() interrupt 3
 				{
 					n0 += 10;
 					if (n0 >= 300)
-						n0 = 300;
+					n0 = 300;
 					//if(n0>=60)
 					//		n0=60;
 				}
@@ -199,23 +200,23 @@ void time1() interrupt 3
 void main()
 {
 	TMOD = 0x11;
-
+	
 	TH0 = 0xFC;
 	TL0 = 0x66;
-
+	
 	TH1 = 0xB1;
 	TL1 = 0xE0;
-
+	
 	ET0 = 1;
 	ET1 = 1;
 	EA = 1;
-
+	
 	TR0 = 1;
 	TR1 = 1;
-
+	
 	Init_OLED();
 	Oled_Clean();
-
+	
 	while (1)
 	{
 		if (page == 0)
@@ -226,26 +227,26 @@ void main()
 		}
 		else
 		{
-		  Oled_DispString_6x8(2, 0, "SET");
+			Oled_DispString_6x8(2, 0, "SET");
 			if(mode==0)Oled_DispString_6x8(50, 0, "LR");
 			else  Oled_DispString_6x8(50, 0, "UD");
 			Oled_DispString_6x8(2, 4, "SEL");
 			if(sel==0){
-					Oled_DispString_6x8(50, 4, "H");
+				Oled_DispString_6x8(50, 4, "H");
 			}else if(sel==1){
-					Oled_DispString_6x8(50, 4, "M");
+				Oled_DispString_6x8(50, 4, "M");
 			}else{
-					Oled_DispString_6x8(50, 4, "S");
-			}
+				Oled_DispString_6x8(50, 4, "S");
 		}
-			Oled_DispString_6x8(2, 1, "H");
-			Oled_DispNUM(15, 1, time[0]);
-			Oled_DispString_6x8(2, 2, "M");
-			Oled_DispNUM(15, 2, time[1]);
-			Oled_DispString_6x8(2, 3, "S");
-			Oled_DispNUM(15, 3, time[2]);
-			delay_ms(200);
 	}
+	Oled_DispString_6x8(2, 1, "H");
+	Oled_DispNUM(15, 1, time[0]);
+	Oled_DispString_6x8(2, 2, "M");
+	Oled_DispNUM(15, 2, time[1]);
+	Oled_DispString_6x8(2, 3, "S");
+	Oled_DispNUM(15, 3, time[2]);
+	delay_ms(200);
+}
 }
 
 void delay_ms(unsigned int ms_number)
@@ -255,11 +256,89 @@ void delay_ms(unsigned int ms_number)
 	for (i = 0; i < ms_number; i++)
 	{
 		for (j = 0; j < 200; j++)
-			;
+		;
 		for (j = 0; j < 102; j++)
-			;
+		;
 	}
 }
 
 
 
+
+*/
+
+#include <REGX52.H>
+#define uchar unsigned char
+uchar time=0;
+uchar x=0;
+uchar n0=90;
+uchar pre_key=0xff;
+uchar cur_key=0xff;
+
+uchar code motor_phase[8] = {
+    0x01,  // 0001 - A
+    0x03,  // 0011 - A+B  
+    0x02,  // 0010 - B
+    0x06,  // 0110 - B+C
+    0x04,  // 0100 - C
+    0x0C,  // 1100 - C+D
+    0x08,  // 1000 - D
+    0x09   // 1001 - D+A
+};
+
+void time0() interrupt 1{
+        TH0 = 0xFC;
+        TL0 = 0x66;
+        if(x>=n0){
+                P2=motor_phase[time];
+                time++;
+                if(time>7){
+                    time=0;
+                }
+                x=0;
+        }
+        x++;
+}
+
+void time1() interrupt 3{
+        TH1 = 0xB1;
+    TL1 = 0xE0;
+      cur_key=P1;
+        if(cur_key!=pre_key){
+                if(pre_key==0xff){
+                        if(cur_key==0xfe){
+                            n0+=10;
+                            if(n0>=150)
+                                n0=150;
+                        }else if(cur_key==0xfd){
+                            n0-=10;
+                            if(n0<=50)
+                                n0=50;
+                        }else if(cur_key==0xfb){
+                            TR0=~TR0;
+                        }
+                }
+                pre_key=cur_key;
+        }
+}
+
+void main(){
+        TMOD = 0x11;
+    
+        TH0 = 0xFC;
+        TL0 = 0x66;
+    
+    TH1 = 0xB1;
+    TL1 = 0xE0;
+    
+    ET0 = 1; 
+    ET1 = 1; 
+    EA = 1; 
+    
+    TR0 = 1;  
+    TR1 = 1; 
+    P2=0x01;    
+      while(1){
+        
+        }
+}

@@ -1,0 +1,5 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj",
+".\Objects\OLED.obj" 
+TO ".\Objects\course_des" 
+PRINT(".\Listings\course_des.m51") RAMSIZE(256) 
